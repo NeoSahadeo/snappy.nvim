@@ -1,105 +1,116 @@
 local main = {}
-local function get_visual_selection_range()
-  -- Temporarily leave visual mode to update '< and '> marks
-  local start_pos = vim.fn.getpos("'<")
-  local end_pos = vim.fn.getpos("'>")
-
-  -- Swap if selection was backwards
-  if start_pos[2] > end_pos[2] or (start_pos[2] == end_pos[2] and start_pos[3] > end_pos[3]) then
-    start_pos, end_pos = end_pos, start_pos
-  end
-
-  return {
-    start_line = start_pos[2],
-    start_col = start_pos[3],
-    end_line = end_pos[2],
-    end_col = end_pos[3],
-  }
-end
-
-local function escape_html(text)
-  -- Escape HTML special characters to display code safely
-  text = text:gsub("&", "&amp;")
-  text = text:gsub("<", "&lt;")
-  text = text:gsub(">", "&gt;")
-  return text
-end
 
 function main.setup(config)
   vim.api.nvim_create_user_command("Snap", function(opts)
-    local html_output = {}
-    local function append_text(text)
-      table.insert(html_output, escape_html(text))
+    local misc = require("snappy.utils.misc")
+    local current_buffer = vim.api.nvim_get_current_buf()
+    local parser = vim.treesitter.get_parser(current_buffer)
+    if parser == nil then
+      print("Parser failed to start")
+      goto exited
+    end
+    local root = parser:parse()[1]:root()
+
+    local lang = vim.treesitter.language.get_lang(vim.bo.filetype) or vim.bo.filetype
+    local query = vim.treesitter.query.get(lang, "highlights")
+    if query == nil then
+      print("No query found")
+      goto exited
     end
 
-    local function append_span(text, hl_group)
-      if hl_group then
-        table.insert(html_output, string.format('<span class="%s">%s</span>', hl_group, escape_html(text)))
+    local __processed_nodes = {}
+    local __data = {}
+    local __line = {}
+    local range = misc.get_visual_selection_range()
+    local line_number = range.start_line
+    local prev_row = nil
+    local prev_end = 0
+    local check_tabs = true
+    for id, node in query:iter_captures(root, current_buffer, range.start_line - 1, range.end_line) do
+      local start_row, start_col = node:start()
+      local _, end_col = node:end_()
+
+      local node_id = node:id()
+      if not __processed_nodes[node_id] then
+        __processed_nodes[node_id] = true
       else
-        table.insert(html_output, "&nbsp;")
+        goto continue
       end
+
+      local line = vim.api.nvim_buf_get_lines(current_buffer, start_row, start_row + 1, false)[1]
+      local line_len = string.len(line)
+      local text = vim.treesitter.get_node_text(node, current_buffer)
+
+      local capture_name = query.captures[id]
+
+      -- TODO: Write custom handler function
+      local hl_id = vim.api.nvim_get_hl_id_by_name("@" .. capture_name .. "." .. lang)
+      local hl = vim.api.nvim_get_hl(0, { id = hl_id, link = false })
+
+      local hex_color = require("snappy.utils.colors").default_fg
+      if hl.fg then
+        hex_color = string.format("#%06x", hl.fg)
+      end
+
+      -- Calculates horizontal space
+      local diff_col = start_col - prev_end
+      prev_end = end_col
+      if diff_col < 0 then
+        diff_col = 0
+      end
+
+      if prev_row == nil then
+        prev_row = start_row - 1
+      end
+
+      if check_tabs then
+        check_tabs = false
+        diff_col = start_col
+      end
+      table.insert(
+        __line,
+        string.rep(" ", diff_col) .. string.format("<span style='color: %s'>%s</span>", hex_color, text)
+      )
+      ------
+
+      if line_len == end_col then
+        -- Calculates vertical space
+        local line_breaks = start_row - prev_row - 1
+        prev_row = start_row - 1
+
+        if line_breaks <= 0 then
+          line_breaks = 1
+        end
+
+        local l = table.concat(__line)
+        for x = 1, line_breaks do
+          l = "\n" .. l
+        end
+        ------
+
+        check_tabs = true
+        line_number = line_number + 1
+        table.insert(__data, l)
+        __line = {}
+      end
+      ::continue::
+    end
+    local export = table.concat(__data):gsub("^%s*(.-)%s*$", "%1")
+
+    export = require("snappy.utils.html").generate_page(export)
+    local tmpfile = vim.fn.tempname() .. ".html"
+    vim.fn.writefile(vim.split(export, "\n"), tmpfile)
+
+    if vim.fn.has("mac") == 1 then
+      vim.cmd("!open " .. vim.fn.shellescape(tmpfile))
+    elseif vim.fn.has("win32") == 1 then
+      vim.cmd("!start " .. vim.fn.shellescape(tmpfile))
+    elseif vim.fn.has("unix") == 1 then
+      vim.cmd("!xdg-open " .. vim.fn.shellescape(tmpfile))
     end
 
-    local range = get_visual_selection_range()
-    local bufnr = vim.api.nvim_get_current_buf()
-    local parser = vim.treesitter.get_parser(bufnr)
-    local tree = parser:parse()[1]
-    local root = tree:root()
-    local query = vim.treesitter.query.get(vim.bo.filetype, "highlights")
-
-    local last_byte = 0
-    local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
-    local full_text = table.concat(lines, "\n")
-
-    for id, node, metadata in query:iter_captures(root, bufnr, range.start_line, range.end_line + 1) do
-      local sr, sc, er, ec = node:range()
-      -- Check if capture intersects visual selection range
-      if
-        (er > range.start_line or (er == range.start_line and ec >= range.start_col))
-        and (sr < range.end_line or (sr == range.end_line and sc <= range.end_col))
-      then
-        local capture_name = query.captures[id]
-        local text = vim.treesitter.get_node_text(node, bufnr)
-        local s_byte = node:start()
-        local e_byte = node:end_()
-        -- print(capture_name)
-        -- if s_byte > last_byte then
-        --   append_span(full_text:sub(last_byte + 1, s_byte), nil)
-        -- end
-        --
-        -- local text_span = full_text:sub(s_byte + 1, e_byte)
-        -- append_span(text_span, capture_name)
-        -- last_byte = e_byte
-        --
-        -- local color = string.sub(vim.api.nvim_exec("highlight @" .. capture_name, true), -7)
-        -- if string.sub(color, 1, 1) ~= "#" then
-        -- 	print(color)
-        -- end
-        -- table.insert(html_output, string.format("<span style='color:%s'>%s</span>", color, escape_html(text)))
-      end
-    end
-
-    local html_result = table.concat(html_output, "")
-
-    local html_page = string.format(
-      [[
-<!doctype html>
-<html lang="en">
-<head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<meta http-equiv="X-UA-Compatible" content="ie=edge" />
-</head>
-<body style="">
-<pre>
-%s
-</pre>
-</body>
-</html>
-    ]],
-      html_result
-    )
-    vim.fn.setreg("+", html_page)
+    goto exited
+    ::exited::
   end, { desc = "Print visual selection range", range = true })
 end
 
