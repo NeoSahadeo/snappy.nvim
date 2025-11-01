@@ -43,13 +43,29 @@ function main.setup(config)
 
       local capture_name = query.captures[id]
 
-      -- TODO: Write custom handler function
-      local hl_id = vim.api.nvim_get_hl_id_by_name("@" .. capture_name .. "." .. lang)
-      local hl = vim.api.nvim_get_hl(0, { id = hl_id, link = false })
+      local command = "highlight @"
+      local color = require("snappy.utils.colors").default_fg
+      local c = 0
+      local color_raw = ""
+      while true do
+        local ok, err = pcall(function()
+          color_raw = vim.api.nvim_exec2(command .. capture_name, { output = true }).output:match("([^%s]+)$")
+        end)
+        if color_raw == nil then
+          break
+        end
+        if not ok then
+          break
+        end
 
-      local hex_color = require("snappy.utils.colors").default_fg
-      if hl.fg then
-        hex_color = string.format("#%06x", hl.fg)
+        if string.find(color_raw, "#") == nil then
+          -- print(color_raw)
+          command = "highlight "
+          capture_name = color_raw
+        else
+          color = color_raw:match("#%x+")
+          break
+        end
       end
 
       -- Calculates horizontal space
@@ -67,10 +83,7 @@ function main.setup(config)
         check_tabs = false
         diff_col = start_col
       end
-      table.insert(
-        __line,
-        string.rep(" ", diff_col) .. string.format("<span style='color: %s'>%s</span>", hex_color, text)
-      )
+      table.insert(__line, string.rep(" ", diff_col) .. string.format("<span style='color: %s'>%s</span>", color, text))
       ------
 
       if line_len == end_col then
@@ -95,6 +108,7 @@ function main.setup(config)
       end
       ::continue::
     end
+    -- goto exited
     local export = table.concat(__data):gsub("^%s*(.-)%s*$", "%1")
 
     export = require("snappy.utils.html").generate_page(export)
@@ -109,7 +123,6 @@ function main.setup(config)
       vim.cmd("!xdg-open " .. vim.fn.shellescape(tmpfile))
     end
 
-    goto exited
     ::exited::
   end, { desc = "Print visual selection range", range = true })
 end
