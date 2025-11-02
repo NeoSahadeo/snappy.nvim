@@ -1,5 +1,20 @@
 local M = {}
 
+--- Python
+--- Traverses up the node tree to check if in f-string
+---@param node any
+---@return boolean
+local function is_in_fstring_node(node)
+  local parent = node:parent()
+  while parent do
+    if parent:type() == "string" or parent:type() == "f_string" then
+      return true
+    end
+    parent = parent:parent()
+  end
+  return false
+end
+
 ---comment
 ---@return (nil|string)
 function M.parse()
@@ -39,6 +54,19 @@ function M.parse()
     -- General
     function(node)
       return not __processed_nodes[node:id()]
+    end,
+
+    -- Python
+    function(node)
+      return not is_in_fstring_node(node)
+    end,
+
+    -- JSX
+    function(node)
+      if node:type():sub(1, 3) == "jsx" then
+        return false
+      end
+      return true
     end,
   }
 
