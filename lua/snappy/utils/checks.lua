@@ -3,7 +3,7 @@ local M = {
   -- Python
   ["python"] = {
     function(node)
-      -- 	--- Traverses up the node tree to check if in f-string
+      --- Traverses up the node tree to check if in f-string
       local parent = node:parent()
       while parent do
         if parent:type() == "string" or parent:type() == "f_string" then
