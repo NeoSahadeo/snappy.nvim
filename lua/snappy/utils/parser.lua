@@ -1,21 +1,5 @@
 local M = {}
 
---- Python
---- Traverses up the node tree to check if in f-string
----@param node any
----@return boolean
-local function is_in_fstring_node(node)
-  local parent = node:parent()
-  while parent do
-    if parent:type() == "string" or parent:type() == "f_string" then
-      return true
-    end
-    parent = parent:parent()
-  end
-  return false
-end
-
----comment
 ---@return (nil|string)
 function M.parse()
   local html = require("snappy.utils.html")
@@ -43,37 +27,49 @@ function M.parse()
   local prev_row = nil
   local prev_end = 0
   local check_tabs = true
+  local fallback_fg = require("snappy.utils.colors"):get_fg()
 
   --- Checks that should be performed to generate a
   --- correct output string.
   --- If a lanuage has an issue parsing, a new check
   --- should be added here to help support it.
-  --- @alias CheckFunc fun(node: TSNode): boolean
-  --- @type CheckFunc[]
-  M.checks = {
+  ---@alias CheckFunc fun(node: TSNode): any
+  ---@type table<any, CheckFunc[]>
+  local checks = {
     -- General
-    function(node)
-      return not __processed_nodes[node:id()]
-    end,
-
-    -- Python
-    function(node)
-      return not is_in_fstring_node(node)
-    end,
-
-    -- JSX
-    function(node)
-      if node:type():sub(1, 3) == "jsx" then
-        return false
-      end
-      return true
-    end,
+    ["all"] = {
+      function(node)
+        return not __processed_nodes[node:id()]
+      end,
+    },
   }
 
+  for key, value in pairs(require("snappy.utils.checks")) do
+    for _, f in ipairs(value) do
+      if not checks[key] then
+        checks[key] = {}
+      end
+      table.insert(checks[key], f)
+    end
+  end
+
+  for key, value in pairs(require("snappy.static").config.checks) do
+    for _, f in ipairs(value) do
+      table.insert(checks[key], f)
+    end
+  end
+
   local function all_checks_pass(node)
-    for _, check in ipairs(M.checks) do
-      if not check(node) then
+    for _, func in ipairs(checks["all"]) do
+      if not func(node) then
         return false
+      end
+    end
+    if checks[lang] ~= nil then
+      for _, func in ipairs(checks[lang]) do
+        if not func(node) then
+          return false
+        end
       end
     end
     return true
@@ -97,7 +93,7 @@ function M.parse()
     -- print(capture_name)
 
     local command = "highlight @"
-    local color = require("snappy.utils.colors").default_fg
+    local color = fallback_fg
     local c = 0
     local color_raw = ""
     while true do

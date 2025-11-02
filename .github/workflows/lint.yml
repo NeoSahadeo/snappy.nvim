@@ -1,31 +1,25 @@
-name: Lint
+name: Stylua
 
-on: push
+on:
+  push:
+    branches:
+    - main
+  pull_request:
+    branches:
+    - main
 
 jobs:
-  lint:
+  stylua:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+        uses: actions/checkout@v5
 
-
-      - name: Setup nodejs
-        uses: actions/setup-node@v4
-        with:
-          node-version: latest
-
-      - name: Install commit message convention lib
-        run: npm i commitlint-config-wizardoc -D
-
-      - name: Check commit message
-        uses: wagoid/commitlint-github-action@v4
-
-      - name: Check code style
+      - name: "Run StyLua"
         uses: JohnnyMorganz/stylua-action@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          version: latest 
+          version: latest
+          # CLI arguments
           args: --check .

@@ -1,6 +1,6 @@
 [project]
-name = "plugin-name"
-version = "0.0.4"
-description = "description"
-author = "Mist"
-email = "mist.zzh@gmail.com"
+name = "snappy"
+version = "0.8.0"
+description = "A nvim code export tool that produces an HTML representation of selected code."
+author = "NeoSahadeo"
+email = "neosa+atomicmail.io"
