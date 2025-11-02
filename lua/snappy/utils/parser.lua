@@ -32,7 +32,7 @@ function M.parse()
   --- Checks that should be performed to generate a
   --- correct output string.
   --- If a lanuage has an issue parsing, a new check
-  --- should be added here to help support it.
+  --- should be added to the checks.lua file to help support it.
   ---@alias CheckFunc fun(node: TSNode): any
   ---@type table<any, CheckFunc[]>
   local checks = {
