@@ -1,0 +1,3 @@
+[submodule "java-html2image"]
+	path = java-html2image
+	url = https://github.com/NeoSahadeo/java-html2image
