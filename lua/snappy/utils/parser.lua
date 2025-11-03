@@ -149,7 +149,7 @@ function M.parse()
     table.insert(
       __line,
       string.rep(" ", diff_col)
-      .. string.format("<span class='%s' style='color: %s'>%s</span>", capture_name, color, html.escape_html(text))
+        .. string.format("<span class='%s' style='color: %s'>%s</span>", capture_name, color, html.escape_html(text))
     )
     ------
 
