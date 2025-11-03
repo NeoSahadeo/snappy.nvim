@@ -4,7 +4,7 @@ local M = {
   ["python"] = {
     function(node)
       --- Traverses up the node tree to check if in f-string
-      local parent = node:parent()
+      local parent = node["node"]:parent()
       while parent do
         if parent:type() == "string" or parent:type() == "f_string" then
           return false
@@ -18,7 +18,7 @@ local M = {
   -- JSX
   ["jsx"] = {
     function(node)
-      if node:type():sub(1, 3) == "jsx" then
+      if node["node"]:type():sub(1, 3) == "jsx" then
         return false
       end
       return true
@@ -26,7 +26,12 @@ local M = {
   },
   ["tsx"] = {
     function(node)
-      if node:type():sub(1, 3) == "jsx" then
+      if node["node"]:type():sub(1, 3) == "jsx" then
+        return false
+      end
+      return true
+    end,
+  },
 
   -- XML
   ["xml"] = {

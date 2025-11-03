@@ -38,8 +38,14 @@ To switch colour schemes just switch the current colour scheme that your nvim in
 ## Configuration
 
 ```lua
----@alias CheckFunc fun(node: TSNode): any
----@field checks table<any, CheckFunc[]>
+---@class Extra
+---@field capture_name string The name of the capture associated with the node
+---@field text string The data text of the node
+---@class ExtendedNode
+---@field node TSNode The Tree-sitter node object
+---@field extra Extra Additional metadata including capture_name
+---@alias CheckFunc fun(extnode: ExtendedNode): any
+---@type table<any, CheckFunc[]>
 config = {
   fallback_fg = "white",
   fallback_bg = "black",

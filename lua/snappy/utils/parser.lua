@@ -33,13 +33,19 @@ function M.parse()
   --- correct output string.
   --- If a lanuage has an issue parsing, a new check
   --- should be added here to help support it.
-  ---@alias CheckFunc fun(node: TSNode): any
+  ---@class Extra
+  ---@field capture_name string The name of the capture associated with the node
+  ---@field text string The data text of the node
+  ---@class ExtendedNode
+  ---@field node TSNode The Tree-sitter node object
+  ---@field extra Extra Additional metadata including capture_name
+  ---@alias CheckFunc fun(extnode: ExtendedNode): any
   ---@type table<any, CheckFunc[]>
   local checks = {
     -- General
     ["all"] = {
       function(node)
-        return not __processed_nodes[node:id()]
+        return not __processed_nodes[node["node"]:id()]
       end,
     },
   }
@@ -79,7 +85,18 @@ function M.parse()
     local start_row, start_col = node:start()
     local _, end_col = node:end_()
 
-    if all_checks_pass(node) then
+    local capture_name = query.captures[id]
+    local text = vim.treesitter.get_node_text(node, current_buffer)
+
+    ---@type ExtendedNode
+    local extended_node = {
+      ["node"] = node,
+      ["extra"] = {
+        ["capture_name"] = capture_name,
+        ["text"] = text,
+      },
+    }
+    if all_checks_pass(extended_node) then
       __processed_nodes[node:id()] = true
     else
       goto continue
@@ -87,17 +104,12 @@ function M.parse()
 
     local line = vim.api.nvim_buf_get_lines(current_buffer, start_row, start_row + 1, false)[1]
     local line_len = string.len(line)
-    local text = vim.treesitter.get_node_text(node, current_buffer)
-
-    local capture_name = query.captures[id]
-    -- print(capture_name)
 
     local command = "highlight @"
     local color = fallback_fg
-    local c = 0
     local color_raw = ""
     while true do
-      local ok, err = pcall(function()
+      local ok = pcall(function()
         color_raw = vim.api.nvim_exec2(command .. capture_name, { output = true }).output:match("([^%s]+)$")
       end)
       if color_raw == nil then
@@ -136,7 +148,8 @@ function M.parse()
     end
     table.insert(
       __line,
-      string.rep(" ", diff_col) .. string.format("<span style='color: %s'>%s</span>", color, html.escape_html(text))
+      string.rep(" ", diff_col)
+      .. string.format("<span class='%s' style='color: %s'>%s</span>", capture_name, color, html.escape_html(text))
     )
     ------
 
@@ -150,7 +163,7 @@ function M.parse()
       end
 
       local l = table.concat(__line)
-      for x = 1, line_breaks do
+      for _ = 1, line_breaks do
         l = "\n" .. l
       end
       ------
