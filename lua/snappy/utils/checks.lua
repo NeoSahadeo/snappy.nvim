@@ -27,6 +27,14 @@ local M = {
   ["tsx"] = {
     function(node)
       if node:type():sub(1, 3) == "jsx" then
+
+  -- XML
+  ["xml"] = {
+    function(node)
+      if node["extra"]["text"]:match("^%s*$") ~= nil then
+        return false
+      end
+      if node["node"]:type() == '"' then
         return false
       end
       return true
