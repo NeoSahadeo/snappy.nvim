@@ -83,6 +83,13 @@ to check for f-strings and strings in Python.
 
 ## Known Issues
 
+> [!IMPORTANT]
+> The parser has only been tested on:
+> - C
+> - Python
+> - XML
+> - JSX/TSX
+
 Due to how `tree-sitter` handles parsing expressions, there will be formatting
 issues namely code duplication. In order to help fix this, please see the
 `lua/snappy/utils/checks.lua` and `lua/snappy/utils/parser.lua` file.

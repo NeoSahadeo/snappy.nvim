@@ -20,7 +20,7 @@ function M.escape_html(text)
   text = text:gsub("<", "&lt;")
   text = text:gsub(">", "&gt;")
   text = text:gsub('"', "&quot;") -- escapes double quotes
-  text = text:gsub("'", "&#39;")  -- escapes single quotes
+  text = text:gsub("'", "&#39;") -- escapes single quotes
   return text
 end
 
