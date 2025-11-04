@@ -1,21 +1,47 @@
+local html = require("snappy.utils.html")
+local misc = require("snappy.utils.misc")
+local colors = require("snappy.utils.colors")
+
 local M = {}
+
+---@return string
+local function plain_parse()
+  local range = misc.get_visual_selection_range()
+  local lines = vim.api.nvim_buf_get_lines(0, range.start_line - 1, range.end_line, false)
+  local __data = {}
+  for index, value in ipairs(lines) do
+    table.insert(__data, string.format("<span style='color:%s'>%s</span>\n", colors:get_fg(), value))
+  end
+  return table.concat(__data)
+end
 
 ---@return (nil|string)
 function M.parse()
-  local html = require("snappy.utils.html")
-  local misc = require("snappy.utils.misc")
   local current_buffer = vim.api.nvim_get_current_buf()
-  local parser = vim.treesitter.get_parser(current_buffer)
-  if parser == nil then
-    print("Parser failed to start")
-    return nil
+
+  local parser = nil
+  local parser_ok = pcall(function()
+    parser = vim.treesitter.get_parser(current_buffer)
+  end)
+  if not parser_ok or parser == nil then
+    vim.lsp.log.error("Failed to obtain parser")
+    -- Plain parse text with no parser
+    return plain_parse()
   end
   local root = parser:parse()[1]:root()
 
-  local lang = vim.treesitter.language.get_lang(vim.bo.filetype) or vim.bo.filetype
+  local lang = nil
+  local lang_ok = pcall(function()
+    lang = vim.treesitter.language.get_lang(vim.bo.filetype) or vim.bo.filetype
+  end)
+  if not lang_ok or lang == nil then
+    vim.lsp.log.error("Language undetermined")
+    return nil
+  end
+
   local query = vim.treesitter.query.get(lang, "highlights")
   if query == nil then
-    print("No query found")
+    vim.lsp.log.error("No query found")
     return nil
   end
 
@@ -130,7 +156,7 @@ function M.parse()
     end
 
     -- Calculates horizontal space
-    -- Formatting exists in the section as it simplifies
+    -- Formatting exists in this section as it simplifies
     -- the design.
     local diff_col = start_col - prev_end
     prev_end = end_col
@@ -149,7 +175,7 @@ function M.parse()
     table.insert(
       __line,
       string.rep(" ", diff_col)
-        .. string.format("<span class='%s' style='color: %s'>%s</span>", capture_name, color, html.escape_html(text))
+      .. string.format("<span class='%s' style='color: %s'>%s</span>", capture_name, color, html.escape_html(text))
     )
     ------
 
