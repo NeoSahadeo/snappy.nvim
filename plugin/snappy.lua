@@ -18,14 +18,13 @@ vim.api.nvim_create_user_command("Snap", function()
       pcall(vim.cmd("!xdg-open " .. vim.fn.shellescape(tmpfile)))
     end
   end
-  generate()
 end, { desc = "Print visual selection range", range = true })
 
-vim.api.nvim_create_user_command("SnapI", function(opts)
-  local current_dir = vim.fn.expand("%:p:h")
-  local parent_dir = vim.fn.fnamemodify(current_dir, ":h")
-  local jar_path = parent_dir .. "/lua/snappy/java/html2image-2.0-SNAPSHOT.jar"
-  local value = generate()
-
-  vim.fn.system(string.format("java -jar %s", jar_path), value)
-end, { desc = "Generate and save a png image of selection range", nargs = "*", range = true })
+-- vim.api.nvim_create_user_command("SnapI", function(opts)
+--   local current_dir = vim.fn.expand("%:p:h")
+--   local parent_dir = vim.fn.fnamemodify(current_dir, ":h")
+--   local jar_path = parent_dir .. "/lua/snappy/java/html2image-2.0-SNAPSHOT.jar"
+--   local value = generate()
+--
+--   vim.fn.system(string.format("java -jar %s", jar_path), value)
+-- end, { desc = "Generate and save a png image of selection range", nargs = "*", range = true })
