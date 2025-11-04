@@ -55,41 +55,7 @@ function M.parse()
   local check_tabs = true
   local fallback_fg = require("snappy.utils.colors"):get_fg()
 
-  --- Checks that should be performed to generate a
-  --- correct output string.
-  --- If a lanuage has an issue parsing, a new check
-  --- should be added here to help support it.
-  ---@class Extra
-  ---@field capture_name string The name of the capture associated with the node
-  ---@field text string The data text of the node
-  ---@class ExtendedNode
-  ---@field node TSNode The Tree-sitter node object
-  ---@field extra Extra Additional metadata including capture_name
-  ---@alias CheckFunc fun(extnode: ExtendedNode): any
-  ---@type table<any, CheckFunc[]>
-  local checks = {
-    -- General
-    ["all"] = {
-      function(node)
-        return not __processed_nodes[node["node"]:id()]
-      end,
-    },
-  }
-
-  for key, value in pairs(require("snappy.utils.checks")) do
-    for _, f in ipairs(value) do
-      if not checks[key] then
-        checks[key] = {}
-      end
-      table.insert(checks[key], f)
-    end
-  end
-
-  for key, value in pairs(require("snappy.static").config.checks) do
-    for _, f in ipairs(value) do
-      table.insert(checks[key], f)
-    end
-  end
+  local checks = require("snappy.utils.checks")
 
   local function all_checks_pass(node)
     for _, func in ipairs(checks["all"]) do
@@ -120,6 +86,7 @@ function M.parse()
       ["extra"] = {
         ["capture_name"] = capture_name,
         ["text"] = text,
+        ["__processed_nodes"] = __processed_nodes,
       },
     }
     if all_checks_pass(extended_node) then
