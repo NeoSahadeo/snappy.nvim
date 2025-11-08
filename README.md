@@ -8,6 +8,10 @@ https://github.com/user-attachments/assets/da27c0d5-13de-4d32-9091-07727693b189
 
 </div>
 
+
+> [!WARNING]
+> This plugin is not fully working and is still under active development.
+
 ## Install Requirements
 
 Currently the only tested version of nvim is `v0.11.4`. As treesitter is
