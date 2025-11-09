@@ -9,16 +9,20 @@
 ---@field node TSNode The Tree-sitter node object
 ---@field extra Extra Additional metadata including capture_name
 ---@field __processed_nodes table<TSNode> metadata including capture_name
+---@field add_skips function(skips: number)
 ---@alias CheckFunc fun(extnode: ExtendedNode): any
 ---@type table<any, CheckFunc[]>
 return {
-  -- General
   ["all"] = {
     function(node)
       return not node["extra"]["__processed_nodes"][node["node"]:id()]
     end,
+    function(node)
+      node["extra"]["add_skips"](node["node"]:child_count())
+      return true
+    end,
   },
-  -- Python
+
   ["python"] = {
     function(node)
       --- Traverses up the node tree to check if in f-string
@@ -33,7 +37,6 @@ return {
     end,
   },
 
-  -- JSX
   ["jsx"] = {
     function(node)
       if node["node"]:type():sub(1, 3) == "jsx" then
@@ -51,7 +54,6 @@ return {
     end,
   },
 
-  -- XML
   ["xml"] = {
     function(node)
       if node["extra"]["text"]:match("^%s*$") ~= nil then
@@ -63,4 +65,17 @@ return {
       return true
     end,
   },
+
+  -- ["markdown"] = {
+  -- function(extnode)
+  --   print(extnode["node"]:type())
+  --   if extnode["node"]:type() == "atx_heading" then
+  --     return false
+  --   end
+  --   -- if extnode["extra"]["capture_name"] == "spell" then
+  --   --   return false
+  --   -- end
+  --   return true
+  -- end,
+  -- },
 }

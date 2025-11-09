@@ -54,6 +54,7 @@ function M.parse()
   local prev_end = 0
   local check_tabs = true
   local fallback_fg = require("snappy.utils.colors"):get_fg()
+  local skips = 0
 
   local checks = require("snappy.utils.checks")
 
@@ -73,11 +74,22 @@ function M.parse()
     return true
   end
 
+  ---@param skips number
+  local function add_skips(__skips)
+    skips = skips + __skips
+  end
+
   for id, node in query:iter_captures(root, current_buffer, range.start_line - 1, range.end_line) do
+    if skips > 0 then
+      skips = skips - 1
+      goto continue
+    end
+
     local start_row, start_col = node:start()
     local _, end_col = node:end_()
 
     local capture_name = query.captures[id]
+    -- TODO: Rewrite node text algorithm
     local text = vim.treesitter.get_node_text(node, current_buffer)
 
     ---@type ExtendedNode
@@ -87,6 +99,7 @@ function M.parse()
         ["capture_name"] = capture_name,
         ["text"] = text,
         ["__processed_nodes"] = __processed_nodes,
+        ["add_skips"] = add_skips,
       },
     }
     if all_checks_pass(extended_node) then
@@ -142,7 +155,7 @@ function M.parse()
     table.insert(
       __line,
       string.rep(" ", diff_col)
-      .. string.format("<span class='%s' style='color: %s'>%s</span>", capture_name, color, html.escape_html(text))
+        .. string.format("<span class='%s' style='color: %s'>%s</span>", capture_name, color, html.escape_html(text))
     )
     ------
 
