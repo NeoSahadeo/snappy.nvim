@@ -10,11 +10,17 @@ function M.get_visual_selection_range()
     start_pos, end_pos = end_pos, start_pos
   end
 
+  -- return {
+  --   start_line = start_pos[2],
+  --   start_col = start_pos[3],
+  --   end_line = end_pos[2],
+  --   end_col = end_pos[3],
+  -- }
   return {
-    start_line = start_pos[2],
-    start_col = start_pos[3],
-    end_line = end_pos[2],
-    end_col = end_pos[3],
+    start_pos[2],
+    start_pos[3],
+    end_pos[2],
+    end_pos[3],
   }
 end
 
